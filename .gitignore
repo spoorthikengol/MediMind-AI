@@ -1,3 +1,7 @@
+# ================================
+# MediMind AI - Git Ignore
+# ================================
+
 # Dependencies
 node_modules/
 **/__pycache__/
@@ -6,8 +10,10 @@ node_modules/
 # Python environment
 backend/venv/
 backend/.venv/
+venv/
+.venv/
 
-# Environment variables
+# Environment variables / secrets
 .env
 .env.*
 !.env.example
@@ -17,16 +23,28 @@ backend/.venv/
 *.sqlite
 *.sqlite3
 
+# Generated medical reports
+backend/generated_reports/
+
+# Uploaded medical reports
+backend/uploads/
+
 # Build files
 frontend/dist/
 frontend/.vite/
+dist/
 
-# IDE / OS
+# IDE
 .vscode/
 .idea/
+
+# Logs
 *.log
+
+# OS files
 desktop.ini
 Thumbs.db
+.DS_Store
 
 # Local shortcuts
 *.lnk
