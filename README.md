@@ -719,22 +719,11 @@ MediMind AI was developed as part of an AI-focused healthcare technology project
 
 ---
 
-# 👥 Contributors
+# 👥 Contributor
 
 ### Spoorthi K P
 Project development, frontend/backend development and AI integration.
 
-### Sumukha S H
-Team member and project contributor.
-
-### Vishal Prakash
-Team member and project contributor.
-
----
-
-# 🤝 Contributing
-
-Contributions, suggestions and improvements are welcome.
 
 ### Development workflow
 
