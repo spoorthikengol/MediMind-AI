@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
@@ -42,7 +43,7 @@ function ReportPage() {
 
   console.error("Report Error:", err);
 
-  alert(err.message);
+  toast.error(err.message);
 
   setError(err.message);
 

@@ -31,7 +31,7 @@ function LoginPage() {
 
       toast.success("Welcome back!");
 
-alert("Login Successful");
+toast.success("Login Successful");
 
 navigate({
   to: "/app/dashboard",
