@@ -58,6 +58,7 @@ from app.api import doctor
 from app.api import notifications
 from app.api import insights
 from app.routers import analyze
+from app.routers import security
 
 # ============================
 # Register Routers
@@ -73,6 +74,7 @@ app.include_router(doctor.router)
 app.include_router(notifications.router)
 app.include_router(insights.router)
 app.include_router(analyze.router)
+app.include_router(security.router)
 
 # ============================
 # Root Endpoint

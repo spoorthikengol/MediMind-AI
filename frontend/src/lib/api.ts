@@ -821,6 +821,54 @@ export const api = {
     return await res.json();
   },
 
+  async changePassword(
+  currentPassword: string,
+  newPassword: string
+) {
+  const token =
+    localStorage.getItem("token");
+
+  const params =
+    new URLSearchParams();
+
+  params.set(
+    "current_password",
+    currentPassword
+  );
+
+  params.set(
+    "new_password",
+    newPassword
+  );
+
+  const res = await fetch(
+    `${API_BASE}/security/change-password?${params.toString()}`,
+    {
+      method: "POST",
+
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    let message = "Failed to change password";
+
+    try {
+      const data = await res.json();
+      message = data.detail || message;
+    } catch {
+      // Keep default message
+    }
+
+    throw new Error(message);
+  }
+
+  return await res.json();
+},
+
 
   logout(){
 

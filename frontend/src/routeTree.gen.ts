@@ -27,6 +27,7 @@ import { Route as AppComparisonRouteImport } from './routes/app.comparison'
 import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppAssistantRouteImport } from './routes/app.assistant'
 import { Route as AppReportIdRouteImport } from './routes/app.report.$id'
+import { Route as AppProfileBackupRouteImport } from './routes/app.profile.backup'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -118,6 +119,11 @@ const AppReportIdRoute = AppReportIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppReportRoute,
 } as any)
+const AppProfileBackupRoute = AppProfileBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => AppProfileRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,12 +137,13 @@ export interface FileRoutesByFullPath {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/doctor': typeof AppDoctorRoute
   '/app/history': typeof AppHistoryRoute
-  '/app/profile': typeof AppProfileRoute
+  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/report': typeof AppReportRouteWithChildren
   '/app/reports': typeof AppReportsRoute
   '/app/search': typeof AppSearchRoute
   '/app/upload': typeof AppUploadRoute
   '/app/': typeof AppIndexRoute
+  '/app/profile/backup': typeof AppProfileBackupRoute
   '/app/report/$id': typeof AppReportIdRoute
 }
 export interface FileRoutesByTo {
@@ -150,12 +157,13 @@ export interface FileRoutesByTo {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/doctor': typeof AppDoctorRoute
   '/app/history': typeof AppHistoryRoute
-  '/app/profile': typeof AppProfileRoute
+  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/report': typeof AppReportRouteWithChildren
   '/app/reports': typeof AppReportsRoute
   '/app/search': typeof AppSearchRoute
   '/app/upload': typeof AppUploadRoute
   '/app': typeof AppIndexRoute
+  '/app/profile/backup': typeof AppProfileBackupRoute
   '/app/report/$id': typeof AppReportIdRoute
 }
 export interface FileRoutesById {
@@ -171,12 +179,13 @@ export interface FileRoutesById {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/doctor': typeof AppDoctorRoute
   '/app/history': typeof AppHistoryRoute
-  '/app/profile': typeof AppProfileRoute
+  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/report': typeof AppReportRouteWithChildren
   '/app/reports': typeof AppReportsRoute
   '/app/search': typeof AppSearchRoute
   '/app/upload': typeof AppUploadRoute
   '/app/': typeof AppIndexRoute
+  '/app/profile/backup': typeof AppProfileBackupRoute
   '/app/report/$id': typeof AppReportIdRoute
 }
 export interface FileRouteTypes {
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/app/search'
     | '/app/upload'
     | '/app/'
+    | '/app/profile/backup'
     | '/app/report/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/app/search'
     | '/app/upload'
     | '/app'
+    | '/app/profile/backup'
     | '/app/report/$id'
   id:
     | '__root__'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/app/search'
     | '/app/upload'
     | '/app/'
+    | '/app/profile/backup'
     | '/app/report/$id'
   fileRoutesById: FileRoutesById
 }
@@ -377,8 +389,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReportIdRouteImport
       parentRoute: typeof AppReportRoute
     }
+    '/app/profile/backup': {
+      id: '/app/profile/backup'
+      path: '/backup'
+      fullPath: '/app/profile/backup'
+      preLoaderRoute: typeof AppProfileBackupRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
   }
 }
+
+interface AppProfileRouteChildren {
+  AppProfileBackupRoute: typeof AppProfileBackupRoute
+}
+
+const AppProfileRouteChildren: AppProfileRouteChildren = {
+  AppProfileBackupRoute: AppProfileBackupRoute,
+}
+
+const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
+  AppProfileRouteChildren,
+)
 
 interface AppReportRouteChildren {
   AppReportIdRoute: typeof AppReportIdRoute
@@ -399,7 +430,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDoctorRoute: typeof AppDoctorRoute
   AppHistoryRoute: typeof AppHistoryRoute
-  AppProfileRoute: typeof AppProfileRoute
+  AppProfileRoute: typeof AppProfileRouteWithChildren
   AppReportRoute: typeof AppReportRouteWithChildren
   AppReportsRoute: typeof AppReportsRoute
   AppSearchRoute: typeof AppSearchRoute
@@ -414,7 +445,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDoctorRoute: AppDoctorRoute,
   AppHistoryRoute: AppHistoryRoute,
-  AppProfileRoute: AppProfileRoute,
+  AppProfileRoute: AppProfileRouteWithChildren,
   AppReportRoute: AppReportRouteWithChildren,
   AppReportsRoute: AppReportsRoute,
   AppSearchRoute: AppSearchRoute,

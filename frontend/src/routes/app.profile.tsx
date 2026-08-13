@@ -10,6 +10,9 @@ import {
   Trophy,
   Sparkles,
   Lock,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import {
@@ -33,14 +36,11 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
-
 export const Route = createFileRoute("/app/profile")({
   component: ProfilePage,
 });
 
-
 function ProfilePage() {
-
   const [user, setUser] = useState<any>({
     name: "",
     email: "",
@@ -49,6 +49,17 @@ function ProfilePage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const fetchAll = useCallback(() => {
     setLoading(true);
@@ -60,6 +71,7 @@ function ProfilePage() {
           name: profileData.full_name,
           email: profileData.email,
         });
+
         setStats(dashboardData);
       })
       .catch((err) => {
@@ -85,7 +97,10 @@ function ProfilePage() {
 
   const save = async () => {
     try {
-      await api.updateProfile({ full_name: user.name });
+      await api.updateProfile({
+        full_name: user.name,
+      });
+
       toast.success("Profile updated");
     } catch (err) {
       console.log(err);
@@ -93,8 +108,56 @@ function ProfilePage() {
     }
   };
 
+  const changePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill in all password fields");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      toast.error("New password must be different");
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+
+      await api.changePassword(
+        currentPassword,
+        newPassword
+      );
+
+      toast.success("Password changed successfully");
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      toast.error(
+        err?.message || "Failed to change password"
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   if (loading) {
-    return <LoadingState label="Loading profile..." fullScreen />;
+    return (
+      <LoadingState
+        label="Loading profile..."
+        fullScreen
+      />
+    );
   }
 
   if (error) {
@@ -108,12 +171,6 @@ function ProfilePage() {
     );
   }
 
-  /**
-   * Achievements derived from real fields already returned by
-   * /dashboard/. "AI Explorer" has no backing data anywhere in the
-   * app (no chat-usage tracking exists), so it's shown locked rather
-   * than fabricated as earned.
-   */
   const achievements = [
     {
       icon: Award,
@@ -131,7 +188,9 @@ function ProfilePage() {
       icon: TrendingUp,
       title: "Improver",
       desc: "Health trend is positive",
-      earned: /improv|excellent|stable/i.test(stats?.health_trend || ""),
+      earned: /improv|excellent|stable/i.test(
+        stats?.health_trend || ""
+      ),
     },
     {
       icon: Sparkles,
@@ -143,45 +202,61 @@ function ProfilePage() {
   ];
 
   return (
-
     <div className="max-w-5xl mx-auto space-y-6">
+
+      {/* Header */}
 
       <div>
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
           Profile
         </h1>
+
         <p className="mt-1 text-muted-foreground">
           Manage your information and preferences.
         </p>
       </div>
 
-      <Card className="border-0 shadow-glow gradient-hero text-white overflow-hidden relative">
+      {/* Profile Hero */}
+
+      <Card className="border-0 shadow-glow gradient-herotext-white overflow-hidden relative">
         <CardContent className="p-6 flex items-center gap-5">
+
           <div className="relative">
+
             <div className="h-20 w-20 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-semibold">
               {initials}
             </div>
+
             <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-health-green flex items-center justify-center">
               <Sparkles className="h-3 w-3 text-white" />
             </span>
+
           </div>
 
           <div>
+
             <div className="text-2xl font-semibold">
               {user.name || "User"}
             </div>
+
             <div className="text-sm opacity-80">
               {user.email}
             </div>
+
             <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs">
               <Activity className="h-3 w-3" />
               Active member
             </div>
+
           </div>
+
         </CardContent>
       </Card>
 
+      {/* Statistics */}
+
       <div className="grid gap-4 sm:grid-cols-3">
+
         <StatCard
           label="Reports"
           value={stats?.total_reports || 0}
@@ -201,19 +276,28 @@ function ProfilePage() {
           icon={TrendingUp}
           tone="success"
         />
+
       </div>
 
+      {/* Achievements */}
+
       <Card className="card-premium border-0 shadow-card">
+
         <CardHeader>
+
           <CardTitle className="text-base flex items-center gap-2">
             <Trophy className="h-4 w-4 text-warning" />
             Achievements
           </CardTitle>
+
         </CardHeader>
 
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
           {achievements.map((a) => {
+
             const Icon = a.icon;
+
             return (
               <div
                 key={a.title}
@@ -223,73 +307,125 @@ function ProfilePage() {
                     : "opacity-50"
                 }`}
               >
+
                 <div
                   className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                    a.earned ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground"
+                    a.earned
+                      ? "bg-blue-600 text-white"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {a.locked ? <Lock className="h-4 w-4" /> : <Icon className="h-5 w-5" />}
+
+                  {a.locked ? (
+                    <Lock className="h-4 w-4" />
+                  ) : (
+                    <Icon className="h-5 w-5" />
+                  )}
+
                 </div>
 
                 <div>
+
                   <div className="text-sm font-semibold flex items-center gap-1.5">
+
                     {a.title}
+
                     {a.locked && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px]"
+                      >
                         Soon
                       </Badge>
                     )}
+
                   </div>
+
                   <div className="text-xs text-muted-foreground">
                     {a.desc}
                   </div>
+
                 </div>
+
               </div>
             );
+
           })}
+
         </CardContent>
       </Card>
 
+      {/* Personal Information + Account Settings */}
+
       <div className="grid gap-6 md:grid-cols-2">
 
+        {/* Personal Information */}
+
         <Card className="card-premium">
+
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
+            <CardTitle>
+              Personal Information
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4">
+
             <div className="space-y-2">
-              <Label>Full Name</Label>
+
+              <Label>
+                Full Name
+              </Label>
+
               <Input
                 value={user.name}
                 onChange={(e) =>
-                  setUser({ ...user, name: e.target.value })
+                  setUser({
+                    ...user,
+                    name: e.target.value,
+                  })
                 }
               />
+
             </div>
 
             <div className="space-y-2">
-              <Label>Email</Label>
+
+              <Label>
+                Email
+              </Label>
+
               <Input
                 type="email"
                 value={user.email}
                 disabled
               />
+
               <p className="text-xs text-muted-foreground">
                 Email can't be changed yet.
               </p>
+
             </div>
 
-            <Button onClick={save}>Save changes</Button>
+            <Button onClick={save}>
+              Save changes
+            </Button>
+
           </CardContent>
         </Card>
 
+        {/* Account Settings */}
+
         <Card className="card-premium">
+
           <CardHeader>
-            <CardTitle>Account Settings</CardTitle>
+            <CardTitle>
+              Account Settings
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4">
+
             <SettingRow
               title="Email notifications"
               desc="Weekly health digest"
@@ -308,8 +444,160 @@ function ProfilePage() {
               title="AI insights"
               desc="Personalized suggestions"
             />
+
           </CardContent>
         </Card>
+
+      </div>
+
+      {/* Security & Privacy */}
+
+      <Card className="card-premium">
+
+        <CardHeader>
+
+          <CardTitle className="flex items-center gap-2">
+
+            <ShieldCheck className="h-5 w-5 text-brand" />
+
+            Security & Privacy
+
+          </CardTitle>
+
+        </CardHeader>
+
+        <CardContent className="space-y-5">
+
+          <div>
+
+            <h3 className="font-medium">
+              Change Password
+            </h3>
+
+            <p className="text-sm text-muted-foreground mt-1">
+              Keep your MediMind account secure by using
+              a strong password.
+            </p>
+
+          </div>
+
+          <PasswordField
+            label="Current Password"
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            visible={showCurrentPassword}
+            onToggle={() =>
+              setShowCurrentPassword(
+                !showCurrentPassword
+              )
+            }
+          />
+
+          <PasswordField
+            label="New Password"
+            value={newPassword}
+            onChange={setNewPassword}
+            visible={showNewPassword}
+            onToggle={() =>
+              setShowNewPassword(
+                !showNewPassword
+              )
+            }
+          />
+
+          <PasswordField
+            label="Confirm New Password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            visible={showConfirmPassword}
+            onToggle={() =>
+              setShowConfirmPassword(
+                !showConfirmPassword
+              )
+            }
+          />
+
+          <div className="flex items-center justify-between gap-4">
+
+            <p className="text-xs text-muted-foreground">
+              Password must contain at least 8 characters.
+            </p>
+
+            <Button
+              onClick={changePassword}
+              disabled={changingPassword}
+            >
+              {changingPassword
+                ? "Changing Password..."
+                : "Change Password"}
+            </Button>
+
+          </div>
+
+        </CardContent>
+
+      </Card>
+
+    </div>
+  );
+}
+
+/* Password Field */
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  visible,
+  onToggle,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+
+      <Label>
+        {label}
+      </Label>
+
+      <div className="relative">
+
+        <Input
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(e) =>
+            onChange(e.target.value)
+          }
+          className="pr-10"
+          autoComplete={
+            label === "Current Password"
+              ? "current-password"
+              : "new-password"
+          }
+        />
+
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label={
+            visible
+              ? `Hide ${label}`
+              : `Show ${label}`
+          }
+        >
+
+          {visible ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+
+        </button>
 
       </div>
 
@@ -317,13 +605,8 @@ function ProfilePage() {
   );
 }
 
+/* Disabled settings */
 
-/**
- * Disabled with a "Coming soon" badge rather than a working-looking
- * Switch, since no backend endpoint exists to actually persist these
- * preferences yet. A toggle that silently does nothing is worse than
- * an honest disabled one.
- */
 function SettingRow({
   title,
   desc,
@@ -333,17 +616,33 @@ function SettingRow({
 }) {
   return (
     <div className="flex items-center justify-between opacity-60">
+
       <div>
+
         <div className="text-sm font-medium flex items-center gap-1.5">
+
           {title}
-          <Badge variant="outline" className="text-[10px]">
+
+          <Badge
+            variant="outline"
+            className="text-[10px]"
+          >
             Coming soon
           </Badge>
+
         </div>
-        <div className="text-xs text-muted-foreground">{desc}</div>
+
+        <div className="text-xs text-muted-foreground">
+          {desc}
+        </div>
+
       </div>
 
-      <Switch checked={false} disabled />
+      <Switch
+        checked={false}
+        disabled
+      />
+
     </div>
   );
 }
