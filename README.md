@@ -699,31 +699,6 @@ Example:
 - [ ] Doctor-patient collaboration
 - [ ] Multi-language expansion
 
----
-
-# 🏆 Project & Hackathon
-
-MediMind AI was developed as part of an AI-focused healthcare technology project.
-
-### Team
-
-**Team:** ClassOfEquipments
-
-### Domain
-
-**AI for Medical Imaging / Healthcare AI**
-
-### Institution
-
-**JNN College of Engineering**
-
----
-
-# 👥 Contributor
-
-### Spoorthi K P
-Project development, frontend/backend development and AI integration.
-
 
 ### Development workflow
 
