@@ -646,24 +646,6 @@ The application focuses on providing:
 
 ---
 
-# 📸 Screenshots
-
-Screenshots can be added here as the project UI is finalized.
-
-Example:
-
-```markdown
-![MediMind Dashboard](docs/screenshots/dashboard.png)
-
-![Report Analysis](docs/screenshots/report-analysis.png)
-
-![Report Comparison](docs/screenshots/comparison.png)
-
-![Health Insights](docs/screenshots/insights.png)
-```
-
----
-
 # 🗺️ Development Roadmap
 
 ### ✅ Completed
