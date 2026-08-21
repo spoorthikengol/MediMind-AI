@@ -21,8 +21,12 @@ def get_history(
     current_user: User = Depends(get_current_user)
 ):
 
-    reports = (
-        db.query(Report)
+    rows = (
+        db.query(Report, ReportAnalysis)
+        .outerjoin(
+            ReportAnalysis,
+            ReportAnalysis.report_id == Report.id
+        )
         .filter(
             Report.user_id == current_user.id
         )
@@ -35,16 +39,7 @@ def get_history(
 
     result = []
 
-    for report in reports:
-
-        analysis = (
-            db.query(ReportAnalysis)
-            .filter(
-                ReportAnalysis.report_id == report.id
-            )
-            .first()
-        )
-
+    for report, analysis in rows:
 
         result.append({
 

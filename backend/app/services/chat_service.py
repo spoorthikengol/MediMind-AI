@@ -1,17 +1,22 @@
+import logging
 import os
+
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
+from google.genai import types
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-HF_TOKEN = os.getenv("HF_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=HF_TOKEN,
-)
+if not GEMINI_API_KEY:
+    raise Exception("GEMINI_API_KEY not found in .env file")
 
-MODEL = "Qwen/Qwen2.5-7B-Instruct:together"
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+MODEL = "gemini-3.6-flash"
 
 
 def ask_ai(report_text: str, question: str) -> str:
@@ -34,23 +39,23 @@ Instructions:
 """
 
     try:
-        response = client.chat.completions.create(
+        response = client.models.generate_content(
             model=MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful medical AI assistant."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3,
-            max_tokens=500,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=500,
+            ),
         )
 
-        return response.choices[0].message.content
+        if not response.text:
+            return "Sorry, I couldn't generate a response right now."
 
-    except Exception as e:
-        return f"AI Error: {str(e)}"
+        return response.text
+
+    except Exception:
+        logger.exception("Gemini chatbot request failed")
+        return (
+            "Sorry, the AI assistant is temporarily unavailable. "
+            "Please try again shortly."
+        )

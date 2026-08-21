@@ -12,24 +12,15 @@ from app.services.critical_alerts import generate_critical_alerts
 
 def analyze_report(pdf_path: str, previous_score=None):
 
-    print("\n===================================")
-    print("STARTING REPORT ANALYSIS")
-    print("===================================\n")
-
     # ==========================================
     # STEP 1 : Extract Text
     # ==========================================
 
     extracted_text = extract_text_from_pdf(pdf_path)
 
-    print("\n===== STEP 1 : EXTRACTED TEXT =====")
-    print(extracted_text)
-
     # ==========================================
     # STEP 2 : Parse Report (Regex Parser)
     # ==========================================
-
-    print("\nUsing Regex Medical Parser...\n")
 
     blood_values = parse_blood_report(extracted_text)
 
@@ -40,23 +31,11 @@ def analyze_report(pdf_path: str, previous_score=None):
         "Blood Report"
     )
 
-    print("\n===== STEP 2 : REPORT TYPE =====")
-    print(report_type)
-
-    print("\n===== STEP 3 : BLOOD VALUES =====")
-    print(blood_values)
-
-    print("\n===== STEP 4 : ANALYSIS =====")
-    print(analysis)
-
     # ==========================================
     # STEP 3 : Health Score
     # ==========================================
 
     health = calculate_health_score(analysis)
-
-    print("\n===== STEP 5 : HEALTH SCORE =====")
-    print(health)
 
     # ==========================================
     # STEP 4 : Medical Insights
@@ -67,9 +46,6 @@ def analyze_report(pdf_path: str, previous_score=None):
         analysis
     )
 
-    print("\n===== STEP 6 : MEDICAL INSIGHTS =====")
-    print(medical_insights)
-
     # ==========================================
     # STEP 5 : Medical Engine
     # ==========================================
@@ -79,9 +55,6 @@ def analyze_report(pdf_path: str, previous_score=None):
         analysis
     )
 
-    print("\n===== STEP 7 : ENRICHED REPORT =====")
-    print(enriched_report)
-
     # ==========================================
     # STEP 6 : Critical Alerts
     # ==========================================
@@ -89,9 +62,6 @@ def analyze_report(pdf_path: str, previous_score=None):
     critical_alerts = generate_critical_alerts(
         enriched_report
     )
-
-    print("\n===== STEP 8 : CRITICAL ALERTS =====")
-    print(critical_alerts)
 
     # ==========================================
     # STEP 7 : Health Trend
@@ -102,19 +72,13 @@ def analyze_report(pdf_path: str, previous_score=None):
         previous_score
     )
 
-    print("\n===== STEP 9 : HEALTH TREND =====")
-    print(trend)
-
     # ==========================================
-    # STEP 8 : Hugging Face AI Summary
+    # STEP 8 : AI Summary (single call, Hugging Face router)
     # ==========================================
 
     medical_summary = generate_gemini_summary(
         extracted_text
     )
-
-    print("\n===== STEP 10 : AI SUMMARY =====")
-    print(medical_summary)
 
     # ==========================================
     # STEP 9 : Recommendations
@@ -124,13 +88,6 @@ def analyze_report(pdf_path: str, previous_score=None):
         blood_values,
         analysis
     )
-
-    print("\n===== STEP 11 : RECOMMENDATIONS =====")
-    print(recommendations)
-
-    print("\n===================================")
-    print("REPORT ANALYSIS FINISHED")
-    print("===================================\n")
 
     return {
 

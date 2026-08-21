@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -6,6 +8,8 @@ from app.models.user import User
 from app.api.users import get_current_user
 
 from app.services.dashboard_service import get_dashboard_data
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/dashboard",
@@ -19,28 +23,18 @@ def dashboard(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        print("\n========== DASHBOARD REQUEST ==========")
-        print("Current User:", current_user.email)
-
-        data = get_dashboard_data(
+        return get_dashboard_data(
             db=db,
             current_user=current_user
         )
 
-        print("\n========== DASHBOARD DATA ==========")
-        print(data)
-        print("====================================\n")
+    except Exception:
 
-        return data
-
-    except Exception as e:
-
-        print("\n========== DASHBOARD ERROR ==========")
-        print(type(e).__name__)
-        print(str(e))
-        print("====================================\n")
+        logger.exception(
+            "Dashboard data failed to load for user_id=%s", current_user.id
+        )
 
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail="Could not load dashboard data. Please try again shortly.",
         )

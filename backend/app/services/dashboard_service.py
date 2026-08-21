@@ -46,14 +46,17 @@ def get_dashboard_data(db: Session, current_user: User):
             "recent_reports": []
         }
 
-    # Get all analyses
-    analyses = (
-    db.query(ReportAnalysis)
-    .join(Report)
-    .filter(Report.user_id == current_user.id)
-    .order_by(Report.created_at.asc())
-    .all()
-)
+    # Get all analyses (with the report fields we need, in one query —
+    # avoids re-querying Report per row below)
+    rows = (
+        db.query(ReportAnalysis, Report.id, Report.created_at)
+        .join(Report)
+        .filter(Report.user_id == current_user.id)
+        .order_by(Report.created_at.asc())
+        .all()
+    )
+
+    analyses = [row[0] for row in rows]
 
     scores = [
         analysis.health_score
@@ -64,29 +67,14 @@ def get_dashboard_data(db: Session, current_user: User):
     # Health History
     # --------------------------
 
-    health_history = []
-
-    for analysis in analyses:
-
-        report = (
-            db.query(Report)
-            .filter(
-                Report.id == analysis.report_id
-            )
-            .first()
-        )
-
-        if report:
-
-            health_history.append({
-
-                "report": f"R{report.id}",
-
-                "score": analysis.health_score,
-
-                "date": str(report.created_at)
-
-            })
+    health_history = [
+        {
+            "report": f"R{report_id}",
+            "score": analysis.health_score,
+            "date": str(created_at),
+        }
+        for analysis, report_id, created_at in rows
+    ]
 
     # --------------------------
     # Recent Reports

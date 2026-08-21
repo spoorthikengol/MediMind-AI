@@ -1,50 +1,66 @@
+import logging
 import os
-import json
+
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
+from google.genai import types
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=os.getenv("HF_TOKEN")
-)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-MODEL = "Qwen/Qwen2.5-7B-Instruct:together"
+if not GEMINI_API_KEY:
+    raise Exception("GEMINI_API_KEY not found in .env file")
+
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+MODEL = "gemini-3.6-flash"
 
 
-def analyze_report(report_text: str):
-
+def analyze_report(report_text: str) -> str:
     prompt = f"""
+You are MediMind AI, an intelligent medical report analysis assistant.
+
 Analyze the following medical report.
 
 Medical Report:
 {report_text}
 
-Return ONLY valid JSON.
+Instructions:
 
-Format:
+- Explain the important findings in simple English.
+- Identify abnormal values when present.
+- Explain what each abnormal value may indicate.
+- Mention normal values when relevant.
+- Do not diagnose diseases.
+- Do not prescribe medicines.
+- Do not invent values or information that is not present in the report.
+- If information is unclear, say that further medical evaluation may be required.
+- Always recommend consulting a qualified healthcare professional.
 
-{{
-    "summary":"",
-    "health_score":0,
-    "risk_level":"",
-    "key_findings":[],
-    "recommendations":[]
-}}
+Return a clear Markdown response.
 """
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {
-                "role":"user",
-                "content":prompt
-            }
-        ],
-        temperature=0.2
-    )
+    try:
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=1200,
+            ),
+        )
 
-    text = response.choices[0].message.content
+        if not response.text:
+            return "No AI analysis was generated."
 
-    return json.loads(text)
+        return response.text
+
+    except Exception:
+        logger.exception("Gemini report analysis request failed")
+        return (
+            "AI report analysis is temporarily unavailable. "
+            "Your extracted report values and health score are still available."
+        )

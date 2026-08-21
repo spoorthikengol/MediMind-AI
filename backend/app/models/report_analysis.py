@@ -16,7 +16,8 @@ class ReportAnalysis(Base):
     report_id = Column(
         Integer,
         ForeignKey("reports.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     blood_values = Column(

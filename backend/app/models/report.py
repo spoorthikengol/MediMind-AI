@@ -18,7 +18,8 @@ class Report(Base):
     user_id = Column(
         Integer,
         ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     file_name = Column(

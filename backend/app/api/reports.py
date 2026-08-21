@@ -1,11 +1,11 @@
-print("REPORTS ROUTER LOADED")
-
+import logging
 import os
 from uuid import uuid4
 from datetime import datetime
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -24,6 +24,8 @@ from app.services.report_service import analyze_report
 from app.services.pdf_service import generate_health_report_pdf
 from app.services import notification_service
 from app.services.report_search_service import search_reports
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
@@ -98,10 +100,23 @@ async def upload_report(
 
 
 
-    analysis_result = analyze_report(
-        file_path,
-        previous_score
-    )
+    try:
+        analysis_result = await run_in_threadpool(
+            analyze_report,
+            file_path,
+            previous_score
+        )
+    except Exception:
+        logger.exception(
+            "Report analysis failed for file_path=%s", file_path
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "We couldn't process this PDF. Please make sure it's a "
+                "valid, unencrypted PDF report and try again."
+            ),
+        )
 
 
 
@@ -305,8 +320,6 @@ def search_my_reports(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    print("===== SEARCH ENDPOINT =====")
-    print("Current user:", current_user.email)
     return search_reports(
         db,
         current_user,

@@ -61,14 +61,9 @@ def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    print("Email entered:", form_data.username)
-    print("Password entered:", form_data.password)
-
     db_user = db.query(User).filter(
         User.email == form_data.username
     ).first()
-
-    print("User found:", db_user)
 
     if not db_user:
         raise HTTPException(
@@ -76,14 +71,10 @@ def login_user(
             detail="Invalid email or password"
         )
 
-    print("Stored hash:", db_user.hashed_password)
-
     result = verify_password(
         form_data.password,
         db_user.hashed_password
     )
-
-    print("Password Match:", result)
 
     if not result:
         raise HTTPException(

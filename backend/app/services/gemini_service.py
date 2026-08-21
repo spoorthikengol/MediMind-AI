@@ -1,28 +1,35 @@
+import logging
 import os
-from dotenv import load_dotenv
-from openai import OpenAI
 
-print("🔥 Hugging Face AI Service Loaded")
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
-HF_TOKEN = os.getenv("HF_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-print("HF TOKEN FOUND:", HF_TOKEN is not None)
+if not GEMINI_API_KEY:
+    raise Exception("GEMINI_API_KEY not found in .env file")
 
-if not HF_TOKEN:
-    raise Exception("HF_TOKEN not found in .env file")
+# Gemini client
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=HF_TOKEN,
-    timeout=120.0,
-    max_retries=2,
-)
+# Keep prompt size bounded to avoid unnecessary latency/cost.
+MAX_SUMMARY_INPUT_CHARS = 12000
 
 
 def generate_gemini_summary(extracted_text: str):
+    report_text = extracted_text or ""
+
+    if len(report_text) > MAX_SUMMARY_INPUT_CHARS:
+        report_text = (
+            report_text[:MAX_SUMMARY_INPUT_CHARS]
+            + "\n\n[Report truncated for length — earlier content shown above.]"
+        )
 
     prompt = f"""
 You are MediMind AI.
@@ -33,7 +40,7 @@ Analyze the following blood report.
 
 Blood Report:
 
-{extracted_text}
+{report_text}
 
 Return the result in Markdown.
 
@@ -81,51 +88,34 @@ Rules:
 - Mention abnormal values first.
 - Mention normal values too.
 - Never scare the patient.
+- Do not diagnose diseases.
 - End with:
 
 "This AI report is for educational purposes only. Please consult a qualified doctor."
 """
 
     try:
-
-        completion = client.chat.completions.create(
-            model="Qwen/Qwen2.5-7B-Instruct:together",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a professional healthcare AI assistant."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3,
-            max_tokens=1200
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=1200,
+            ),
         )
 
-        return completion.choices[0].message.content
+        if not response.text:
+            raise RuntimeError("Gemini returned an empty response")
 
-    except Exception as e:
+        return response.text
 
-        print("\n==============================")
-        print("HUGGING FACE ERROR")
-        print("==============================")
-        print("Type:", type(e).__name__)
-        print("Details:", repr(e))
-        print("==============================\n")
+    except Exception:
+        logger.exception("Gemini AI summary request failed")
 
-        return f"""
-# AI Summary Failed
+        return """
+# AI Summary Unavailable
 
-Error:
-
-{str(e)}
-
-Please check:
-
-- HF_TOKEN
-- Internet Connection
-- Hugging Face Router
-- Model Availability
+We couldn't generate an AI summary for this report right now.
+Your blood values and health score above are still available —
+please try again shortly, or contact support if this continues.
 """
