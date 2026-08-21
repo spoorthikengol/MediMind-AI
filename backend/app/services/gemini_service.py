@@ -93,18 +93,24 @@ Rules:
 CRITICAL ACCURACY RULES:
 
 - Use ONLY values explicitly present in the medical report.
-- Do NOT invent, assume, or infer abnormal results.
-- Compare each value with the reference range given in the report.
+- Do NOT invent, assume, or infer laboratory abnormalities.
+- Compare every laboratory value with the reference range stated in the report.
 - If a value is within its stated reference range, classify it as NORMAL.
-- If all reported kidney markers are normal, do NOT describe kidney stress, kidney dysfunction, impaired filtration, or kidney disease.
-- Do NOT contradict the report's stated clinical impression.
-- If the report says "Normal", "Optimal", or "Healthy", respect that unless another reported value clearly contradicts it.
+- If a value is above its stated reference range, classify it as HIGH.
+- If a value is below its stated reference range, classify it as LOW.
+- If kidney markers are normal, do NOT mention kidney stress, kidney dysfunction, impaired filtration, or kidney disease.
+- If creatinine is elevated, describe it only as "elevated creatinine" or "high creatinine".
+- An elevated creatinine value alone must NOT be called kidney dysfunction or kidney disease.
+- If eGFR is normal, explicitly state that the reported eGFR is normal.
+- Do NOT diagnose any disease or condition.
+- Do NOT claim that the patient has kidney dysfunction based only on one abnormal laboratory value.
+- For abnormal kidney-related values, recommend discussing the result with a qualified healthcare professional and possible follow-up testing.
+- Do NOT contradict the report's stated clinical impression unless the reported laboratory values clearly support a discrepancy.
 - Do not create health risks from normal laboratory values.
-- If there is insufficient information to determine a risk, say "No specific risk identified from the available values."
-- Never diagnose a disease.
+- If there is insufficient information to determine a risk, say:
+  "No specific risk identified from the available laboratory values."
 - Never recommend prescription medicines.
 - Clearly distinguish laboratory findings from general health advice.
-
 End with:
 
 "This AI report is for educational purposes only. Please consult a qualified doctor."
