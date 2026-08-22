@@ -19,7 +19,7 @@ def analyze_report(pdf_path: str, previous_score=None):
     extracted_text = extract_text_from_pdf(pdf_path)
 
     # ==========================================
-    # STEP 2 : Parse Report (Regex Parser)
+    # STEP 2 : Parse Report
     # ==========================================
 
     blood_values = parse_blood_report(extracted_text)
@@ -73,21 +73,50 @@ def analyze_report(pdf_path: str, previous_score=None):
     )
 
     # ==========================================
-    # STEP 8 : AI Summary (single call, Hugging Face router)
-    # ==========================================
-
-    medical_summary = generate_gemini_summary(
-        extracted_text
-    )
-
-    # ==========================================
-    # STEP 9 : Recommendations
+    # STEP 8 : Recommendations
     # ==========================================
 
     recommendations = generate_recommendations(
         blood_values,
         analysis
     )
+
+    # ==========================================
+    # STEP 9 : AI Summary
+    # ==========================================
+    #
+    # Send only the structured laboratory data
+    # instead of the entire extracted PDF text.
+    # This reduces Gemini input size and latency.
+    #
+
+    compact_report = []
+
+    for name, item in enriched_report.items():
+
+        if not isinstance(item, dict):
+            continue
+
+        value = item.get("value")
+        unit = item.get("unit")
+        normal_range = item.get("normal_range")
+        status = item.get("status")
+
+        compact_report.append(
+            f"{name}: {value} {unit or ''} | "
+            f"Reference: {normal_range or 'Not provided'} | "
+            f"Status: {status or 'Unknown'}"
+        )
+
+    compact_report_text = "\n".join(compact_report)
+
+    medical_summary = generate_gemini_summary(
+        compact_report_text
+    )
+
+    # ==========================================
+    # FINAL RESULT
+    # ==========================================
 
     return {
 
