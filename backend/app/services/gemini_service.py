@@ -5,178 +5,214 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+
+# ==========================================
+# Logging
+# ==========================================
+
 logger = logging.getLogger(__name__)
 
-# Load environment variables
+
+# ==========================================
+# Environment
+# ==========================================
+
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY not found in .env file")
+    raise RuntimeError(
+        "GEMINI_API_KEY not found in .env file"
+    )
 
-# Gemini client
-client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Keep report input within a reasonable size
-MAX_SUMMARY_INPUT_CHARS = 12000
+# ==========================================
+# Gemini Client
+# ==========================================
 
+client = genai.Client(
+    api_key=GEMINI_API_KEY
+)
+
+
+# ==========================================
+# Model
+# ==========================================
+
+MODEL = "gemini-3.6-flash"
+
+
+# ==========================================
+# Performance Settings
+# ==========================================
+
+# The report_service already sends compact
+# structured laboratory data.
+MAX_SUMMARY_INPUT_CHARS = 8000
+
+# Keep the AI response short to improve speed.
+MAX_SUMMARY_OUTPUT_TOKENS = 1000
+
+
+# ==========================================
+# Generate AI Medical Summary
+# ==========================================
 
 def generate_gemini_summary(extracted_text: str) -> str:
-    """
-    Generate a complete AI medical summary from the extracted report text.
-    """
 
     report_text = extracted_text or ""
+
+    # --------------------------------------
+    # Empty report protection
+    # --------------------------------------
 
     if not report_text.strip():
         return """
 # AI Summary Unavailable
 
-No medical report text was available for analysis.
+No medical report information was available for AI summary generation.
 
 This AI report is for educational purposes only. Please consult a qualified doctor.
-"""
+""".strip()
 
-    # Prevent extremely large requests
+    # --------------------------------------
+    # Limit input size
+    # --------------------------------------
+
     if len(report_text) > MAX_SUMMARY_INPUT_CHARS:
         report_text = (
             report_text[:MAX_SUMMARY_INPUT_CHARS]
-            + "\n\n[Report truncated because it exceeded the processing limit.]"
+            + "\n[Additional report data omitted for processing speed.]"
         )
 
+    # --------------------------------------
+    # Short optimized prompt
+    # --------------------------------------
+
     prompt = f"""
-You are MediMind AI, a medical report explanation assistant.
+You are MediMind AI.
 
-Analyze ONLY the medical report provided below.
+Analyze ONLY the laboratory data provided below.
 
-MEDICAL REPORT:
+REPORT DATA:
 {report_text}
 
-IMPORTANT RULES:
-
-- Start immediately with "# Overall Health".
-- Do NOT create a "Parameters to cover" section.
-- Do NOT create an outline.
-- Do NOT explain what you are going to analyze.
-- Analyze the actual laboratory parameters directly.
-- Cover EVERY laboratory parameter present in the report.
-- Use ONLY values explicitly present in the report.
-- Never invent laboratory values.
-- Never invent abnormalities.
-- Compare every value with its stated reference range.
-- Classify every parameter as Normal, High, or Low.
-- Mention abnormal parameters first.
-- Mention normal parameters after abnormal parameters.
-- Keep each parameter explanation concise.
-- Never stop in the middle of a parameter.
-- Never end with an incomplete sentence.
-- Do not diagnose diseases.
-- Do not prescribe medicines.
-- Do not scare the patient.
-- If information is insufficient, clearly say so.
-
-KIDNEY ACCURACY RULES:
-
-- High creatinine alone does NOT mean kidney disease.
-- High creatinine alone does NOT mean kidney dysfunction.
-- If creatinine is high, call it "elevated creatinine" or "high creatinine".
-- If eGFR is normal, explicitly say that the reported eGFR is normal.
-- If other kidney markers are normal, state that they are normal.
-- For abnormal kidney-related values, recommend discussing the result with a qualified healthcare professional.
-- Do not diagnose kidney disease from one laboratory value.
-
-RETURN EXACTLY THESE SECTIONS:
+Return Markdown using EXACTLY these sections:
 
 # Overall Health
-
-Give a concise 2-3 sentence overview based only on the report.
+Give a concise 2-sentence overview.
 
 # Blood Parameter Analysis
+Cover EVERY parameter.
 
-Analyze EVERY laboratory parameter.
-
-Use this format:
+For each parameter use:
 
 **Parameter Name**
 - Value: actual value and unit
 - Status: Normal / High / Low
-- Why it matters: one concise explanation
+- Why it matters: one short explanation
 
-Do NOT omit normal parameters.
+Put abnormal parameters first, then normal parameters.
 
 # Possible Health Risks
+Mention only risks supported by abnormal values.
 
-Mention ONLY risks supported by abnormal laboratory findings.
-
-If there are no abnormal findings, write:
-
+If there are no abnormal values, write:
 "No specific risk identified from the available laboratory values."
 
-Do not turn normal values into health risks.
-
 # Diet Recommendations
-
-Give 2-3 general healthy suggestions.
+Give 2 short general suggestions.
 
 # Exercise Recommendations
-
-Give 1-2 general safe exercise suggestions.
+Give 1-2 short safe suggestions.
 
 # Hydration Advice
-
-Give a general hydration suggestion.
+Give one general hydration suggestion.
 
 # Lifestyle Tips
+Briefly mention sleep, stress management, healthy habits and appropriate follow-up.
 
-Mention:
-- Sleep
-- Stress management
-- Healthy habits
-- Appropriate medical follow-up
+IMPORTANT ACCURACY RULES:
 
-FINAL RULE:
+- Use ONLY values provided in the report data.
+- Never invent values or abnormalities.
+- Use the stated reference range when available.
+- Do not diagnose diseases.
+- Do not prescribe medicines.
+- Do not exaggerate risks.
+- Do not scare the patient.
+- Do not omit laboratory parameters.
+- Keep every explanation concise.
+- Complete every section before stopping.
 
-Complete ALL sections before stopping.
+KIDNEY SAFETY:
 
-Never stop halfway through the parameter analysis.
+- High creatinine alone does NOT mean kidney disease.
+- High creatinine alone does NOT prove kidney dysfunction.
+- Describe it only as "elevated creatinine" or "high creatinine".
+- If eGFR is normal, state that the reported eGFR is normal.
+- If other kidney markers are normal, state that they are normal.
+- For abnormal kidney-related values, recommend discussing them with a qualified healthcare professional.
+- Do not diagnose kidney disease from a single laboratory value.
 
-End with exactly:
+End exactly with:
 
 "This AI report is for educational purposes only. Please consult a qualified doctor."
 """
 
+    # --------------------------------------
+    # Gemini request
+    # --------------------------------------
+
     try:
+
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.2,
-                max_output_tokens=3000,
+                max_output_tokens=MAX_SUMMARY_OUTPUT_TOKENS,
             ),
         )
 
+        # ----------------------------------
+        # Validate response
+        # ----------------------------------
+
         if not response.text:
-            raise RuntimeError("Gemini returned an empty response")
+            raise RuntimeError(
+                "Gemini returned an empty response"
+            )
 
         result = response.text.strip()
 
         if not result:
-            raise RuntimeError("Gemini returned an empty response")
+            raise RuntimeError(
+                "Gemini returned an empty response"
+            )
 
         return result
 
+    # --------------------------------------
+    # Error handling
+    # --------------------------------------
+
     except Exception as exc:
-        logger.exception("Gemini AI summary request failed: %s", exc)
+
+        logger.exception(
+            "Gemini AI summary request failed: %s",
+            exc
+        )
 
         return """
 # AI Summary Unavailable
 
 We couldn't generate an AI summary for this report right now.
 
-Your extracted laboratory values, health score and report analysis are still available.
+Your laboratory values, health score and report analysis are still available.
 
-Please try generating the summary again shortly.
+Please try again shortly.
 
 This AI report is for educational purposes only. Please consult a qualified doctor.
-"""
+""".strip()
