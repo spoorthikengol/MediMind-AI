@@ -2,8 +2,7 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 
 # ==========================================
@@ -16,31 +15,43 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # Environment
 # ==========================================
+#
+# NOTE: This service now calls Hugging Face instead of Gemini
+# (function name/signature kept as generate_gemini_summary since
+# report_service.py imports it by that exact name). GEMINI_API_KEY
+# is intentionally no longer read here — gemini_parser.py and any
+# other Gemini-dependent files are untouched and still use it.
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-if not GEMINI_API_KEY:
+if not HF_TOKEN:
     raise RuntimeError(
-        "GEMINI_API_KEY not found in .env file"
+        "HF_TOKEN not found in .env file"
     )
 
 
 # ==========================================
-# Gemini Client
+# Hugging Face Client
 # ==========================================
+#
+# Same OpenAI-compatible Inference Providers approach already
+# used successfully in chat_service.py: reuse the existing
+# `openai` package pointed at Hugging Face's router instead of
+# adding a new dependency.
 
-client = genai.Client(
-    api_key=GEMINI_API_KEY
+client = OpenAI(
+    base_url="https://router.huggingface.co/v1",
+    api_key=HF_TOKEN,
 )
 
 
 # ==========================================
-# Gemini Model
+# Hugging Face Model
 # ==========================================
 
-MODEL = "gemini-3.6-flash"
+MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
 # ==========================================
@@ -202,62 +213,60 @@ End exactly with:
 """
 
     # ==========================================
-    # Gemini API Request
+    # Hugging Face API Request
     # ==========================================
 
     try:
 
-        response = client.models.generate_content(
+        completion = client.chat.completions.create(
             model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=MAX_SUMMARY_OUTPUT_TOKENS,
-            ),
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            max_tokens=MAX_SUMMARY_OUTPUT_TOKENS,
         )
 
         # ==========================================
         # Validate Response
         # ==========================================
 
-        if not response.text:
+        result = (
+            completion.choices[0].message.content
+            if completion.choices else None
+        )
+
+        if not result or not result.strip():
             raise RuntimeError(
-                "Gemini returned an empty response"
+                "Hugging Face returned an empty response"
             )
 
-        result = response.text.strip()
-
-        if not result:
-            raise RuntimeError(
-                "Gemini returned an empty response"
-            )
-
-        return result
+        return result.strip()
 
     # ==========================================
     # Error Handling
     # ==========================================
+    #
+    # Any failure (bad token, quota, model unavailable, network,
+    # etc.) is logged with the full exception on the backend so
+    # it can be diagnosed, but a friendly, non-alarming message
+    # is returned to the user instead of a raw error string, a
+    # 429, or any other provider-specific error.
 
     except Exception as exc:
 
         logger.exception(
-            "Gemini AI summary request failed: %s",
+            "Hugging Face AI summary request failed: %s",
             exc
         )
 
-        # TEMPORARY DEBUG MESSAGE
-        # This lets us see the actual Gemini error.
-        return f"""
+        return """
 # AI Medical Summary
 
 ### AI Summary Unavailable
 
-Gemini could not generate the summary.
-
-**Error:**
-{str(exc)}
-
-Please check the backend terminal for the full error.
+The AI medical summary could not be generated right now.
+Please try again shortly.
 
 This AI report is for educational purposes only. Please consult a qualified doctor.
 """.strip()
