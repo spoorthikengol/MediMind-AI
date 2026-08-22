@@ -1,9 +1,9 @@
 import logging
 import os
+import traceback
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 
 # ==========================================
@@ -19,35 +19,122 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-if not GEMINI_API_KEY:
-    raise RuntimeError(
-        "GEMINI_API_KEY not found in .env file"
-    )
+if not HF_TOKEN:
+    raise Exception("HF_TOKEN not found in .env file")
 
 
 # ==========================================
-# Gemini Client
+# Hugging Face Client
 # ==========================================
+#
+# Hugging Face's Inference Providers expose an OpenAI-compatible
+# chat completions endpoint at router.huggingface.co, so the
+# already-installed `openai` package can be reused as the client
+# just by pointing it at a different base_url + api_key. This
+# avoids adding a new dependency (huggingface_hub) for something
+# the existing package already covers.
 
-client = genai.Client(
-    api_key=GEMINI_API_KEY
+client = OpenAI(
+    base_url="https://router.huggingface.co/v1",
+    api_key=HF_TOKEN,
 )
 
 
 # ==========================================
-# Gemini Model
+# Hugging Face Model
 # ==========================================
 
-MODEL = "gemini-3.6-flash"
+MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
 # ==========================================
-# Chat Response Limit
+# Maximum Chat Response
 # ==========================================
 
 MAX_CHAT_OUTPUT_TOKENS = 800
+
+
+# ==========================================
+# System Instructions (Medical Safety Rules)
+# ==========================================
+
+SYSTEM_PROMPT = """You are MediMind AI, an intelligent medical report assistant.
+
+Your job is to answer the user's questions using the medical report
+provided to you.
+
+INSTRUCTIONS:
+
+1. Answer the user's question directly.
+
+2. Use simple English that a normal patient can understand.
+
+3. Use ONLY information available in the medical report.
+
+4. Do NOT invent laboratory values.
+
+5. Do NOT assume medical conditions that are not supported
+   by the report.
+
+6. Do NOT diagnose diseases.
+
+7. Do NOT prescribe medicines.
+
+8. If the user asks about kidney health, use the actual
+   kidney-related values in the report such as:
+   - Creatinine
+   - Urea
+   - BUN
+   - eGFR
+   - Urine findings (protein, microalbumin, ACR)
+   if they are available.
+
+9. If kidney values are normal, clearly explain that the
+   reported kidney-related values are within the stated
+   reference ranges.
+
+10. If one kidney value is abnormal, explain that specific
+    abnormal result without automatically calling it
+    kidney disease.
+
+11. If the report does not contain enough information to
+    answer the question, clearly say that the report does
+    not provide enough information.
+
+12. Do not scare the patient.
+
+13. Do not exaggerate risks.
+
+14. When appropriate, explain:
+    - What the result means
+    - Whether it is normal, high or low
+    - Why it matters
+    - What the patient can discuss with a doctor
+
+15. Keep the response concise while still answering the
+    question completely.
+
+16. Use headings or bullet points only when they improve
+    readability.
+
+17. Do not repeat the entire medical report.
+
+18. Do not provide unrelated medical information.
+
+19. Never stop in the middle of an explanation.
+
+20. Always finish the answer completely.
+
+21. Always include this reminder at the end when giving
+    medical guidance:
+
+    "This information is for educational purposes only.
+    Please consult a qualified healthcare professional
+    for medical advice."
+
+Keep the response focused and concise."""
 
 
 # ==========================================
@@ -56,214 +143,85 @@ MAX_CHAT_OUTPUT_TOKENS = 800
 
 def ask_ai(report_text: str, question: str) -> str:
 
-    report_text = (report_text or "").strip()
-    question = (question or "").strip()
+    report_text = report_text or ""
+    question = question or ""
 
-    if not report_text:
-        return (
-            "I couldn't find your latest medical report. "
-            "Please upload a report first."
-        )
-
-    if not question:
-        return (
-            "Please enter a question about your medical report."
-        )
-
-
-    # ==========================================
-    # AI Prompt
-    # ==========================================
-
-    prompt = f"""
-You are MediMind AI, a medical report explanation assistant.
-
-Your task is to answer the patient's question using ONLY
-the medical report provided below.
-
+    user_message = f"""==========================================
 MEDICAL REPORT
-==============
+==========================================
 
 {report_text}
 
-
-PATIENT QUESTION
-================
+==========================================
+USER QUESTION
+==========================================
 
 {question}
 
+==========================================
+IMPORTANT
+==========================================
 
-IMPORTANT RULES
-===============
-
-1. Answer the patient's question directly.
-
-2. Use simple English that a normal patient can understand.
-
-3. Use ONLY information that appears in the report.
-
-4. Never invent laboratory values.
-
-5. Never invent symptoms or diagnoses.
-
-6. Do not diagnose a disease.
-
-7. Do not prescribe medicines.
-
-8. Do not exaggerate medical risks.
-
-9. Do not unnecessarily scare the patient.
-
-10. If the report does not contain enough information,
-say clearly that the available report does not provide
-enough information.
-
-11. If the patient asks about kidney health, carefully
-check the actual kidney-related values in the report,
-including when available:
-
-- BUN
-- Creatinine
-- BUN/Creatinine ratio
-- eGFR
-- Urine protein
-- Urine microalbumin
-- Albumin/Creatinine ratio
-- Urine findings
-- Uric acid
-
-12. Compare values with the reference ranges shown in
-the report.
-
-13. If the kidney values are normal, clearly say that
-the reported kidney-related values are within the
-provided reference ranges.
-
-14. Do NOT call a patient as having kidney disease just
-because of one laboratory value.
-
-15. If an abnormal value exists, explain that specific
-result and recommend discussing it with a qualified
-healthcare professional.
-
-16. If the patient asks "Explain my last report in simple
-terms", give a useful summary instead of repeating the
-entire report.
-
-17. For a general report explanation, use this structure:
-
-### Overall Health
-
-Give a short 2-3 sentence explanation of the overall
-report.
-
-### Important Results
-
-Mention the important laboratory results with their
-actual values and status.
-
-### What It Means
-
-Explain the important results in simple language.
-
-### What You Can Do
-
-Give 2-4 general healthy suggestions based only on
-the report.
-
-18. If the patient asks a specific question such as
-"Am I at risk for kidney disease?", answer that question
-directly rather than generating the full report summary.
-
-19. Keep the answer reasonably detailed.
-
-20. Do not make the answer extremely short.
-
-21. Do not use "..." as a replacement for a laboratory
-value.
-
-22. If a requested value is not available, say
-"Not available in the report."
-
-23. Complete the answer before stopping.
-
-24. Always end medical guidance with:
-
-"This information is for educational purposes only.
-Please consult a qualified healthcare professional
-for medical advice."
-
-
-NOW ANSWER THE PATIENT'S QUESTION.
-
-Do not repeat the entire medical report.
-Do not create unrelated information.
-"""
+Answer the USER QUESTION now.
+Keep the response focused and concise."""
 
 
     # ==========================================
-    # Gemini Request
+    # Hugging Face Request
     # ==========================================
 
     try:
 
-        response = client.models.generate_content(
+        completion = client.chat.completions.create(
             model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=MAX_CHAT_OUTPUT_TOKENS,
-            ),
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.3,
+            max_tokens=MAX_CHAT_OUTPUT_TOKENS,
         )
 
 
         # ==========================================
-        # Validate Gemini Response
+        # Validate Response
         # ==========================================
 
-        if response is None:
-            raise RuntimeError(
-                "Gemini returned no response."
-            )
-
-        answer = response.text
-
+        answer = completion.choices[0].message.content if completion.choices else None
 
         if not answer:
-            raise RuntimeError(
-                "Gemini returned an empty response."
+
+            return (
+                "Sorry, I couldn't generate a response "
+                "right now. Please try again."
             )
 
 
-        answer = answer.strip()
-
-
-        if not answer:
-            raise RuntimeError(
-                "Gemini returned an empty response."
-            )
-
-
-        return answer
+        return answer.strip()
 
 
     # ==========================================
     # Error Handling
     # ==========================================
+    #
+    # DEBUG BEHAVIOR (matches the previous Gemini debugging setup):
+    # Any failure here is logged with a full traceback and then
+    # re-raised, so chat.py's existing `except Exception as e`
+    # handler in the /chat/ask route returns the real error
+    # message to the caller as a 500 response, e.g.
+    # "AI Chat Error: <actual reason>", instead of always
+    # returning a generic "temporarily unavailable" string.
+    #
+    # Once this is confirmed working end-to-end, this can be
+    # swapped back to catching the exception and returning a
+    # friendly fallback string for production use.
 
-    except Exception as exc:
+    except Exception:
 
         logger.exception(
-            "Gemini chatbot request failed: %s",
-            exc
+            "Hugging Face chatbot request failed"
         )
 
-        # Print the REAL error in the terminal
-        print("\n==========================================")
-        print("MEDIMIND CHAT ERROR")
-        print("==========================================")
-        print(str(exc))
-        print("==========================================\n")
+        traceback.print_exc()
 
-        # Re-raise so chat.py can return the real error
         raise
