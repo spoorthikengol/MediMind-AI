@@ -124,6 +124,13 @@ def analyze_report(pdf_path: str, previous_score=None):
 
         "extracted_text": extracted_text,
 
+        # Same structured, status-computed text already sent to
+        # generate_gemini_summary() above. Exposing it here lets
+        # the chatbot be fed the identical data source instead of
+        # raw OCR text, so both features can't disagree about a
+        # parameter's status.
+        "compact_report_text": compact_report_text,
+
         "blood_values": blood_values,
 
         "analysis": analysis,

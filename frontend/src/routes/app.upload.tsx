@@ -58,6 +58,7 @@ type ParamStatus = "normal" | "attention" | "unknown";
 /** Backend shape isn't fully trusted, so every field stays unknown until normalized. */
 interface MedicalReport {
   extracted_text?: string;
+  compact_report_text?: string;
   health_score?: unknown;
   risk_level?: unknown;
   overall_status?: unknown;
@@ -835,7 +836,18 @@ function UploadPage() {
         setStatus("done");
         setReport(data);
 
-        localStorage.setItem("latest_report", data.extracted_text || "");
+        // Store the same structured, status-computed text the AI
+        // Medical Summary uses (compact_report_text), not the raw
+        // OCR extracted_text. Previously the chatbot re-derived
+        // Normal/High/Low itself from unstructured raw text, which
+        // could disagree with the summary's already-computed status
+        // for the same parameter. Falls back to extracted_text only
+        // if the backend response doesn't include it (e.g. a stale
+        // cached response shape).
+        localStorage.setItem(
+          "latest_report",
+          data.compact_report_text || data.extracted_text || ""
+        );
         localStorage.setItem("latest_analysis", JSON.stringify(data));
 
         toast.success("Medical report analyzed successfully.");
