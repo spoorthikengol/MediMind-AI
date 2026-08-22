@@ -51,7 +51,7 @@ client = OpenAI(
 # Hugging Face Model
 # ==========================================
 
-MODEL = "Qwen/Qwen2.5-7B-Instruct"
+MODEL = "Qwen/Qwen3-8B"
 
 
 # ==========================================
