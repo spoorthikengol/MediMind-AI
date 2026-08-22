@@ -15,12 +15,6 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # Environment
 # ==========================================
-#
-# NOTE: This service now calls Hugging Face instead of Gemini
-# (function name/signature kept as generate_gemini_summary since
-# report_service.py imports it by that exact name). GEMINI_API_KEY
-# is intentionally no longer read here — gemini_parser.py and any
-# other Gemini-dependent files are untouched and still use it.
 
 load_dotenv()
 
@@ -35,11 +29,6 @@ if not HF_TOKEN:
 # ==========================================
 # Hugging Face Client
 # ==========================================
-#
-# Same OpenAI-compatible Inference Providers approach already
-# used successfully in chat_service.py: reuse the existing
-# `openai` package pointed at Hugging Face's router instead of
-# adding a new dependency.
 
 client = OpenAI(
     base_url="https://router.huggingface.co/v1",
@@ -59,9 +48,6 @@ MODEL = "Qwen/Qwen3-8B"
 # ==========================================
 
 MAX_SUMMARY_INPUT_CHARS = 8000
-
-# 1600 gives enough space to finish every parameter
-# without making the response unnecessarily long.
 MAX_SUMMARY_OUTPUT_TOKENS = 1600
 
 
@@ -96,8 +82,7 @@ No specific risk identified from the available laboratory values.
 
 ### Recommendations
 
-- Provide a valid medical report.
-- Review the report with a qualified healthcare professional.
+No specific action is indicated from the available laboratory values.
 
 This AI report is for educational purposes only. Please consult a qualified doctor.
 """.strip()
@@ -125,91 +110,222 @@ Analyze ONLY the laboratory information provided below.
 MEDICAL REPORT:
 {report_text}
 
-Create a clear and complete medical summary.
+Create a clear, accurate and patient-friendly medical summary.
 
-IMPORTANT:
+==========================================
+IMPORTANT DATA RULES
+==========================================
 
-- Cover EVERY laboratory parameter present in the report.
-- Do not skip parameters.
-- Do not invent laboratory values.
-- Do not invent abnormalities.
-- Use the exact values from the report.
-- Use the reference range from the report when available.
-- Classify each parameter as Normal, High or Low.
-- Mention abnormal parameters first.
-- Then mention normal parameters.
-- Keep explanations concise but complete.
-- Do not use "..." for missing values.
-- If a value is unavailable, write "Not available".
-- Do not diagnose diseases.
-- Do not prescribe medicines.
-- Do not scare the patient.
-- Do not create risks from normal results.
+1. Cover EVERY laboratory parameter present in the report.
 
-Use EXACTLY these sections:
+2. Do not skip laboratory parameters.
+
+3. Do not invent laboratory values.
+
+4. Do not invent parameters that are not present.
+
+5. Use the exact value and unit provided in the report.
+
+6. Use the reference range from the report when available.
+
+7. Do not invent a reference range when one is not provided.
+
+8. Determine the status as Normal, High or Low using the
+   report's supplied status or reference range.
+
+9. If the report already provides a status, respect that status.
+
+10. Never describe a value as Normal if it is outside the
+    supplied reference range.
+
+11. Never describe a value as High or Low without evidence
+    from the report data.
+
+12. Put abnormal parameters first.
+
+13. Put normal parameters after abnormal parameters.
+
+14. Keep explanations simple and easy for a normal patient
+    to understand.
+
+15. Do not diagnose diseases.
+
+16. Do not prescribe medicines.
+
+17. Do not scare the patient.
+
+18. Do not exaggerate risks.
+
+19. Do not create health risks from normal results.
+
+20. If information is missing, write "Not available".
+
+==========================================
+EXACT OUTPUT STRUCTURE
+==========================================
+
+Use EXACTLY these four sections:
 
 ### Overall Health
 
-Write 2-3 simple sentences describing the overall laboratory findings.
+Write 2-3 simple sentences describing the overall laboratory
+findings.
+
+Mention important abnormal findings first.
+
+If all available parameters are normal, clearly say that the
+reported laboratory findings are within their stated ranges.
+
+Do not make conclusions about tests that are not present.
+
+==========================================
 
 ### Blood Parameter Analysis
 
-For EVERY laboratory parameter use this format:
+List EVERY laboratory parameter.
+
+For EACH parameter use EXACTLY this format:
 
 **Parameter Name**
-- Value: actual value and unit
-- Status: Normal / High / Low
-- Why it matters: one clear sentence
+
+- Current Value: actual value and unit
+- Normal / High / Low: Normal / High / Low
+- Why it matters: one short, simple sentence
 
 Example:
 
-**Blood Urea Nitrogen (BUN)**
-- Value: 12.1 mg/dL
-- Status: Normal
-- Why it matters: BUN reflects a waste product produced when the body breaks down protein and can help assess kidney function and hydration.
+**Hemoglobin A1c**
 
-Important:
-Every parameter must be completed before moving to the next one.
+- Current Value: 5.2 %
+- Normal / High / Low: Normal
+- Why it matters: Hemoglobin A1c is within the reported normal range.
+
+Example:
+
+**Serum Creatinine**
+
+- Current Value: 1.35 mg/dL
+- Normal / High / Low: High
+- Why it matters: The reported creatinine is above the stated reference range.
+
+IMPORTANT:
+
+- Include EVERY parameter.
+- Use the exact parameter name from the report.
+- Use the exact value from the report.
+- Use the exact unit from the report.
+- Use the correct Normal / High / Low status.
+- Keep "Why it matters" to ONE short sentence.
+- Do not write long explanations.
+- Do not add unrelated medical information.
+- Do not repeat the complete reference range for every normal result.
+- If a reference range is important for an abnormal result, mention it briefly.
+- Never use "..." as a replacement for missing information.
+
+==========================================
 
 ### Possible Health Risks
 
-Mention ONLY possible risks supported by abnormal laboratory findings.
+Mention ONLY possible concerns supported by abnormal laboratory
+findings.
 
-If there are no abnormal findings, write:
+If there are no abnormal findings, write EXACTLY:
 
 "No specific risk identified from the available laboratory values."
 
+If there is an abnormal value:
+
+- Explain that specific abnormal result.
+- Do not automatically call it a disease.
+- Do not diagnose the patient.
+- Do not invent additional risks.
+
+For example, if creatinine is high, say that the reported
+creatinine is elevated and that it may warrant discussion
+with a healthcare professional.
+
+Do NOT claim that the patient has kidney disease based only
+on an elevated creatinine value.
+
+==========================================
+
 ### Recommendations
 
-Give 3-4 short recommendations covering:
+Give recommendations ONLY when supported by the laboratory
+findings.
 
-- Diet
-- Hydration
-- Exercise or lifestyle
-- Medical follow-up when appropriate
+IMPORTANT:
 
-KIDNEY SAFETY RULES:
+- Do NOT automatically give diet advice.
+- Do NOT automatically give hydration advice.
+- Do NOT automatically give exercise advice.
+- Do NOT give exact fluid intake amounts.
+- Do NOT prescribe medicines.
+- Do NOT recommend medication changes.
+- Do NOT recommend specific treatments.
+- Do NOT invent follow-up timeframes.
+- Do NOT recommend a specific medical specialist unless the
+  report itself explicitly recommends one.
 
-- Use only kidney-related values actually present in the report.
-- High creatinine alone does NOT prove kidney disease.
-- Do not call one abnormal kidney value kidney disease.
-- If eGFR is normal, explicitly state that the reported eGFR is normal.
-- If eGFR is low, describe it as a reduced eGFR and recommend discussing it with a qualified healthcare professional.
-- If urine protein or microalbumin is elevated, describe the reported abnormality without diagnosing kidney disease.
-- If BUN is normal, clearly state that BUN is normal.
-- Do not invent kidney abnormalities.
+If all reported parameters are normal, write:
 
-FINAL RULE:
+"No specific action is indicated from the available laboratory values."
 
-Complete EVERY laboratory parameter.
+If abnormal parameters are present, recommend discussing the
+reported abnormal findings with a qualified healthcare
+professional.
 
-Do not stop halfway through the parameter list.
+Keep recommendations short and directly related to the
+reported laboratory findings.
 
-Do not create additional sections.
+==========================================
+KIDNEY SAFETY RULES
+==========================================
 
-End exactly with:
+1. Use only kidney-related values actually present in the report.
 
-"This AI report is for educational purposes only. Please consult a qualified doctor."
+2. If creatinine is present, use its actual value and status.
+
+3. If eGFR is present, use its actual value and status.
+
+4. If BUN or urea is present, use its actual value and status.
+
+5. If urine protein, microalbumin or ACR is present, use the
+   actual reported value and status.
+
+6. High creatinine alone does NOT prove kidney disease.
+
+7. Do not diagnose kidney disease from a single abnormal value.
+
+8. If eGFR is normal according to the report, state that the
+   reported eGFR is normal.
+
+9. If eGFR is low according to the report, describe it as a
+   reduced eGFR and recommend discussing the finding with a
+   qualified healthcare professional.
+
+10. If urine protein, microalbumin or ACR is elevated, describe
+    the reported abnormality without diagnosing kidney disease.
+
+11. If BUN is normal, clearly state that the reported BUN is normal.
+
+12. Do not invent kidney abnormalities.
+
+==========================================
+FINAL RULES
+==========================================
+
+- Complete EVERY laboratory parameter.
+- Never stop halfway through the parameter list.
+- Do not create additional sections.
+- Do not repeat the entire medical report.
+- Keep the response concise.
+- Make the output visually clean.
+- Follow the exact parameter format above.
+
+End EXACTLY with:
+
+This AI report is for educational purposes only. Please consult a qualified doctor.
 """
 
     # ==========================================
@@ -221,7 +337,10 @@ End exactly with:
         completion = client.chat.completions.create(
             model=MODEL,
             messages=[
-                {"role": "user", "content": prompt},
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
             ],
             temperature=0.2,
             max_tokens=MAX_SUMMARY_OUTPUT_TOKENS,
@@ -233,10 +352,12 @@ End exactly with:
 
         result = (
             completion.choices[0].message.content
-            if completion.choices else None
+            if completion.choices
+            else None
         )
 
         if not result or not result.strip():
+
             raise RuntimeError(
                 "Hugging Face returned an empty response"
             )
@@ -246,12 +367,6 @@ End exactly with:
     # ==========================================
     # Error Handling
     # ==========================================
-    #
-    # Any failure (bad token, quota, model unavailable, network,
-    # etc.) is logged with the full exception on the backend so
-    # it can be diagnosed, but a friendly, non-alarming message
-    # is returned to the user instead of a raw error string, a
-    # 429, or any other provider-specific error.
 
     except Exception as exc:
 
