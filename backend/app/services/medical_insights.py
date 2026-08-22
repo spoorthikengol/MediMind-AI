@@ -41,7 +41,7 @@ def generate_medical_insights(blood_values, analysis):
 
     elif analysis.get("WBC") == "Low":
         possible_conditions.append(
-            "Possible Weak Immune System"
+            "Possible Low White Blood Cell Count"
         )
 
     # ===========================
@@ -50,12 +50,12 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("Platelets") == "Low":
         possible_conditions.append(
-            "Possible Bleeding Disorder"
+            "Possible Low Platelet Count"
         )
 
     elif analysis.get("Platelets") == "High":
         possible_conditions.append(
-            "Possible Blood Clotting Disorder"
+            "Possible High Platelet Count"
         )
 
     # ===========================
@@ -64,17 +64,17 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("Glucose") == "High":
         possible_conditions.append(
-            "Possible Diabetes or Prediabetes"
+            "Elevated Blood Glucose — Further Evaluation Recommended"
         )
 
     if analysis.get("HbA1c") == "Prediabetes":
         possible_conditions.append(
-            "Prediabetes"
+            "Prediabetes Range"
         )
 
     elif analysis.get("HbA1c") == "Diabetes":
         possible_conditions.append(
-            "Diabetes Mellitus"
+            "Diabetes Range — Medical Evaluation Recommended"
         )
 
     # ===========================
@@ -83,17 +83,17 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("Creatinine") == "High":
         possible_conditions.append(
-            "Possible Kidney Dysfunction"
+            "Elevated Creatinine — Further Evaluation Recommended"
         )
 
     if analysis.get("Urea") == "High":
         possible_conditions.append(
-            "Possible Kidney Disease"
+            "Elevated Urea — Further Evaluation Recommended"
         )
 
     if analysis.get("Uric Acid") == "High":
         possible_conditions.append(
-            "Possible Gout or Kidney Stone Risk"
+            "Elevated Uric Acid — Further Evaluation Recommended"
         )
 
     # ===========================
@@ -102,12 +102,12 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("TSH") == "High":
         possible_conditions.append(
-            "Possible Hypothyroidism"
+            "Possible Thyroid Function Abnormality"
         )
 
     elif analysis.get("TSH") == "Low":
         possible_conditions.append(
-            "Possible Hyperthyroidism"
+            "Possible Thyroid Function Abnormality"
         )
 
     # ===========================
@@ -121,12 +121,12 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("LDL") == "High":
         possible_conditions.append(
-            "Increased Heart Disease Risk"
+            "Elevated LDL Cholesterol — Cardiovascular Risk Assessment Recommended"
         )
 
     if analysis.get("HDL") == "Low":
         possible_conditions.append(
-            "Low Good Cholesterol"
+            "Low HDL Cholesterol"
         )
 
     # ===========================
@@ -135,12 +135,12 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("SGPT") == "High":
         possible_conditions.append(
-            "Possible Liver Dysfunction"
+            "Elevated SGPT — Further Evaluation Recommended"
         )
 
     if analysis.get("SGOT") == "High":
         possible_conditions.append(
-            "Possible Liver Inflammation"
+            "Elevated SGOT — Further Evaluation Recommended"
         )
 
     # ===========================
@@ -149,12 +149,12 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("Potassium") == "High":
         possible_conditions.append(
-            "High Potassium (Hyperkalemia)"
+            "High Potassium — Medical Evaluation Recommended"
         )
 
     if analysis.get("Sodium") == "Low":
         possible_conditions.append(
-            "Low Sodium (Hyponatremia)"
+            "Low Sodium — Medical Evaluation Recommended"
         )
 
     # ===========================
@@ -163,7 +163,7 @@ def generate_medical_insights(blood_values, analysis):
 
     if analysis.get("Vitamin D") == "Low":
         possible_conditions.append(
-            "Vitamin D Deficiency"
+            "Vitamin D Deficiency Range"
         )
 
     # ===========================
@@ -171,7 +171,6 @@ def generate_medical_insights(blood_values, analysis):
     # ===========================
 
     if len(possible_conditions) == 0:
-
         possible_conditions.append(
             "No major abnormalities detected."
         )
