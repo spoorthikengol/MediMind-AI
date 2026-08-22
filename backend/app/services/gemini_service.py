@@ -13,107 +13,135 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
-    raise Exception("GEMINI_API_KEY not found in .env file")
+    raise RuntimeError("GEMINI_API_KEY not found in .env file")
 
 # Gemini client
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Keep prompt size bounded to avoid unnecessary latency/cost.
+# Keep report input within a reasonable size
 MAX_SUMMARY_INPUT_CHARS = 12000
 
 
-def generate_gemini_summary(extracted_text: str):
+def generate_gemini_summary(extracted_text: str) -> str:
+    """
+    Generate a complete AI medical summary from the extracted report text.
+    """
+
     report_text = extracted_text or ""
 
+    if not report_text.strip():
+        return """
+# AI Summary Unavailable
+
+No medical report text was available for analysis.
+
+This AI report is for educational purposes only. Please consult a qualified doctor.
+"""
+
+    # Prevent extremely large requests
     if len(report_text) > MAX_SUMMARY_INPUT_CHARS:
         report_text = (
             report_text[:MAX_SUMMARY_INPUT_CHARS]
-            + "\n\n[Report truncated for length — earlier content shown above.]"
+            + "\n\n[Report truncated because it exceeded the processing limit.]"
         )
 
     prompt = f"""
-You are MediMind AI.
+You are MediMind AI, a medical report explanation assistant.
 
-You are an expert medical AI assistant.
+Analyze ONLY the medical report provided below.
 
-Analyze the following blood report.
-
-Blood Report:
-
+MEDICAL REPORT:
 {report_text}
 
-Return the result in Markdown.
+IMPORTANT RULES:
 
-Use EXACTLY these headings.
+- Start immediately with "# Overall Health".
+- Do NOT create a "Parameters to cover" section.
+- Do NOT create an outline.
+- Do NOT explain what you are going to analyze.
+- Analyze the actual laboratory parameters directly.
+- Cover EVERY laboratory parameter present in the report.
+- Use ONLY values explicitly present in the report.
+- Never invent laboratory values.
+- Never invent abnormalities.
+- Compare every value with its stated reference range.
+- Classify every parameter as Normal, High, or Low.
+- Mention abnormal parameters first.
+- Mention normal parameters after abnormal parameters.
+- Keep each parameter explanation concise.
+- Never stop in the middle of a parameter.
+- Never end with an incomplete sentence.
+- Do not diagnose diseases.
+- Do not prescribe medicines.
+- Do not scare the patient.
+- If information is insufficient, clearly say so.
+
+KIDNEY ACCURACY RULES:
+
+- High creatinine alone does NOT mean kidney disease.
+- High creatinine alone does NOT mean kidney dysfunction.
+- If creatinine is high, call it "elevated creatinine" or "high creatinine".
+- If eGFR is normal, explicitly say that the reported eGFR is normal.
+- If other kidney markers are normal, state that they are normal.
+- For abnormal kidney-related values, recommend discussing the result with a qualified healthcare professional.
+- Do not diagnose kidney disease from one laboratory value.
+
+RETURN EXACTLY THESE SECTIONS:
 
 # Overall Health
 
-Explain the patient's health.
+Give a concise 2-3 sentence overview based only on the report.
 
 # Blood Parameter Analysis
 
-Explain every blood parameter.
+Analyze EVERY laboratory parameter.
 
-For each parameter include:
+Use this format:
 
-- Current Value
-- Normal / High / Low
-- Why it matters
+**Parameter Name**
+- Value: actual value and unit
+- Status: Normal / High / Low
+- Why it matters: one concise explanation
+
+Do NOT omit normal parameters.
 
 # Possible Health Risks
 
-Mention ONLY possible risks.
+Mention ONLY risks supported by abnormal laboratory findings.
 
-Do NOT diagnose diseases.
+If there are no abnormal findings, write:
+
+"No specific risk identified from the available laboratory values."
+
+Do not turn normal values into health risks.
 
 # Diet Recommendations
 
-Give healthy diet suggestions.
+Give 2-3 general healthy suggestions.
 
 # Exercise Recommendations
 
-Suggest suitable exercises.
+Give 1-2 general safe exercise suggestions.
 
 # Hydration Advice
 
-Suggest daily water intake.
+Give a general hydration suggestion.
 
 # Lifestyle Tips
 
-Mention sleep, stress management, healthy habits and follow-up tests.
+Mention:
+- Sleep
+- Stress management
+- Healthy habits
+- Appropriate medical follow-up
 
-Rules:
+FINAL RULE:
 
-- Use simple English.
-- Mention abnormal values first.
-- Mention normal values too.
-- Never scare the patient.
-- Do not diagnose diseases.
+Complete ALL sections before stopping.
 
-CRITICAL ACCURACY RULES:
+Never stop halfway through the parameter analysis.
 
-- Use ONLY values explicitly present in the medical report.
-- Do NOT invent, assume, or infer laboratory abnormalities.
-- Compare every laboratory value with the reference range stated in the report.
-- If a value is within its stated reference range, classify it as NORMAL.
-- If a value is above its stated reference range, classify it as HIGH.
-- If a value is below its stated reference range, classify it as LOW.
-- If kidney markers are normal, do NOT mention kidney stress, kidney dysfunction, impaired filtration, or kidney disease.
-- If creatinine is elevated, describe it only as "elevated creatinine" or "high creatinine".
-- An elevated creatinine value alone must NOT be called kidney dysfunction or kidney disease.
-- If eGFR is normal, explicitly state that the reported eGFR is normal.
-- Do NOT diagnose any disease or condition.
-- Do NOT claim that the patient has kidney dysfunction based only on one abnormal laboratory value.
-- For abnormal kidney-related values, recommend discussing the result with a qualified healthcare professional and possible follow-up testing.
-- Do NOT contradict the report's stated clinical impression unless the reported laboratory values clearly support a discrepancy.
-- Do not create health risks from normal laboratory values.
-- If there is insufficient information to determine a risk, say:
-  "No specific risk identified from the available laboratory values."
-- Never recommend prescription medicines.
-- Clearly distinguish laboratory findings from general health advice.
-End with:
-
-"This AI report is for educational purposes only. Please consult a qualified doctor."
+End with exactly:
 
 "This AI report is for educational purposes only. Please consult a qualified doctor."
 """
@@ -123,23 +151,32 @@ End with:
             model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.3,
-                max_output_tokens=1200,
+                temperature=0.2,
+                max_output_tokens=3000,
             ),
         )
 
         if not response.text:
             raise RuntimeError("Gemini returned an empty response")
 
-        return response.text
+        result = response.text.strip()
 
-    except Exception:
-        logger.exception("Gemini AI summary request failed")
+        if not result:
+            raise RuntimeError("Gemini returned an empty response")
+
+        return result
+
+    except Exception as exc:
+        logger.exception("Gemini AI summary request failed: %s", exc)
 
         return """
 # AI Summary Unavailable
 
 We couldn't generate an AI summary for this report right now.
-Your blood values and health score above are still available —
-please try again shortly, or contact support if this continues.
+
+Your extracted laboratory values, health score and report analysis are still available.
+
+Please try generating the summary again shortly.
+
+This AI report is for educational purposes only. Please consult a qualified doctor.
 """
