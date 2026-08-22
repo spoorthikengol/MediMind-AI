@@ -460,16 +460,35 @@ const parseSummaryBlocks = (text: string): SummaryBlock[] => {
       flushParagraph();
       return;
     }
-    if (line.startsWith("## ")) {
-      flushParagraph();
-      blocks.push({ type: "heading", level: 2, text: line.slice(3).trim() });
-      return;
-    }
-    if (line.startsWith("# ")) {
-      flushParagraph();
-      blocks.push({ type: "heading", level: 1, text: line.slice(2).trim() });
-      return;
-    }
+    if (line.startsWith("### ")) {
+  flushParagraph();
+  blocks.push({
+    type: "heading",
+    level: 2,
+    text: line.slice(4).trim(),
+  });
+  return;
+}
+
+if (line.startsWith("## ")) {
+  flushParagraph();
+  blocks.push({
+    type: "heading",
+    level: 2,
+    text: line.slice(3).trim(),
+  });
+  return;
+}
+
+if (line.startsWith("# ")) {
+  flushParagraph();
+  blocks.push({
+    type: "heading",
+    level: 1,
+    text: line.slice(2).trim(),
+  });
+  return;
+}
     if (line.startsWith("- ") || line.startsWith("* ")) {
       flushParagraph();
       const item = line.slice(2).trim();
