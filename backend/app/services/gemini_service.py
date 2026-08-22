@@ -48,7 +48,7 @@ MODEL = "Qwen/Qwen3-8B"
 # ==========================================
 
 MAX_SUMMARY_INPUT_CHARS = 8000
-MAX_SUMMARY_OUTPUT_TOKENS = 1600
+MAX_SUMMARY_OUTPUT_TOKENS = 1800
 
 
 # ==========================================
@@ -76,15 +76,19 @@ No medical report information was available.
 
 No laboratory values were available for analysis.
 
-### Possible Health Risks
+### Possible Health Considerations
 
-No specific risk identified from the available laboratory values.
+No specific health considerations can be identified because no laboratory values were provided.
 
-### Recommendations
+### Recommended Next Steps
 
-No specific action is indicated from the available laboratory values.
+No specific action can be recommended from the available information.
 
-This AI report is for educational purposes only. Please consult a qualified doctor.
+### Important Note
+
+This AI-generated summary is for educational and informational purposes only.
+It does not diagnose a medical condition and should not replace evaluation
+by a qualified healthcare professional.
 """.strip()
 
     # ==========================================
@@ -103,86 +107,180 @@ This AI report is for educational purposes only. Please consult a qualified doct
     # ==========================================
 
     prompt = f"""
-You are MediMind AI, a medical report explanation assistant.
+You are MediMind AI, a medical laboratory report explanation assistant.
 
-Analyze ONLY the laboratory information provided below.
+Your job is to explain ONLY the laboratory information contained in the
+provided report in a clear, accurate, cautious and patient-friendly way.
 
-MEDICAL REPORT:
+You are NOT a doctor.
+
+You must NOT diagnose diseases, prescribe medicines or invent information.
+
+==================================================
+MEDICAL REPORT
+==================================================
+
 {report_text}
 
-Create a clear, accurate and patient-friendly medical summary.
+==================================================
+CORE DATA ACCURACY RULES
+==================================================
 
-==========================================
-IMPORTANT DATA RULES
-==========================================
+1. Analyze ONLY information actually present in the medical report.
 
-1. Cover EVERY laboratory parameter present in the report.
+2. Cover EVERY laboratory parameter present in the report.
 
-2. Do not skip laboratory parameters.
+3. Never skip laboratory parameters.
 
-3. Do not invent laboratory values.
+4. Never invent laboratory values.
 
-4. Do not invent parameters that are not present.
+5. Never invent laboratory parameters.
 
-5. Use the exact value and unit provided in the report.
+6. Never invent units.
 
-6. Use the reference range from the report when available.
+7. Use the exact value and unit provided in the report.
 
-7. Do not invent a reference range when one is not provided.
+8. Use the exact laboratory reference range when available.
 
-8. Determine the status as Normal, High or Low using the
-   report's supplied status or reference range.
+9. NEVER invent a reference range.
 
-9. If the report already provides a status, respect that status.
+10. If a reference range is not provided, write:
+   "Reference range not provided."
 
-10. Never describe a value as Normal if it is outside the
-    supplied reference range.
+11. If the report explicitly provides a status such as Normal, High or Low,
+    respect that status.
 
-11. Never describe a value as High or Low without evidence
-    from the report data.
+12. If the report does not provide a status but provides a reference range,
+    determine the status from that supplied range.
 
-12. Put abnormal parameters first.
+13. If there is insufficient information to determine the status, write:
+    "Status cannot be determined from the available information."
 
-13. Put normal parameters after abnormal parameters.
+14. Never call a result Normal if the supplied report indicates it is outside
+    the stated reference range.
 
-14. Keep explanations simple and easy for a normal patient
-    to understand.
+15. Never call a result High or Low without evidence from the report.
 
-15. Do not diagnose diseases.
+16. Put abnormal parameters before normal parameters.
 
-16. Do not prescribe medicines.
+17. Keep explanations simple enough for a normal patient to understand.
 
-17. Do not scare the patient.
+18. Do not repeat the entire original medical report.
 
-18. Do not exaggerate risks.
+==================================================
+CLINICAL SAFETY RULES
+==================================================
 
-19. Do not create health risks from normal results.
+1. An abnormal laboratory result is NOT automatically a diagnosis.
 
-20. If information is missing, write "Not available".
+2. Never diagnose a disease from a single laboratory value.
 
-==========================================
-EXACT OUTPUT STRUCTURE
-==========================================
+3. Never tell the patient that they definitely have a disease based only
+   on laboratory findings.
 
-Use EXACTLY these four sections:
+4. Clearly distinguish:
+   - Reported laboratory finding
+   - Possible clinical significance
+   - Recommended follow-up
+
+5. If information is insufficient for a conclusion, explicitly say:
+   "The available laboratory information is insufficient to determine this."
+
+6. Do not exaggerate risks.
+
+7. Do not create health risks from normal laboratory results.
+
+8. Do not scare the patient.
+
+9. Do not prescribe medication.
+
+10. Do not recommend medication changes.
+
+11. Do not provide medication dosages.
+
+12. Do not recommend specific treatments.
+
+13. Do not provide exact fluid-intake amounts.
+
+14. Do not automatically give diet advice.
+
+15. Do not automatically give exercise advice.
+
+16. Do not invent follow-up timeframes.
+
+17. Do not recommend a specific medical specialist unless the report itself
+    explicitly recommends one.
+
+==================================================
+KIDNEY SAFETY RULES
+==================================================
+
+When kidney-related laboratory values are present:
+
+1. Use ONLY kidney-related values actually present in the report.
+
+2. If creatinine is present, use its exact reported value, unit and status.
+
+3. If eGFR is present, use its exact reported value, unit and status.
+
+4. If BUN or urea is present, use its exact reported value, unit and status.
+
+5. If urine protein, microalbumin or ACR is present, use the exact reported
+   value, unit and status.
+
+6. An elevated creatinine alone does NOT prove kidney disease.
+
+7. Do NOT diagnose kidney disease from a single abnormal creatinine result.
+
+8. Creatinine interpretation can depend on the laboratory reference range
+   and the individual's clinical context.
+
+9. If eGFR is reported as normal by the laboratory, state that the reported
+   eGFR is within the stated range.
+
+10. If eGFR is reported as reduced, describe it as a reduced reported eGFR
+    and recommend discussing the finding with a qualified healthcare
+    professional.
+
+11. If urine protein, microalbumin or ACR is elevated, describe the reported
+    abnormality without diagnosing kidney disease.
+
+12. If BUN is reported as normal, state that the reported BUN is normal.
+
+13. Never invent kidney abnormalities.
+
+14. If eGFR is NOT present, do NOT calculate or invent an eGFR.
+
+==================================================
+OUTPUT STRUCTURE
+==================================================
+
+Return ONLY the following sections.
+
+# AI Medical Summary
 
 ### Overall Health
 
-Write 2-3 simple sentences describing the overall laboratory
-findings.
+Write 2-4 concise sentences.
 
 Mention important abnormal findings first.
 
-If all available parameters are normal, clearly say that the
-reported laboratory findings are within their stated ranges.
+Explain the overall pattern of the laboratory results.
 
-Do not make conclusions about tests that are not present.
+If all available laboratory parameters are within their stated ranges,
+clearly say so.
 
-==========================================
+Do NOT make conclusions about tests that are not present.
+
+Do NOT diagnose a disease.
+
+==================================================
 
 ### Blood Parameter Analysis
 
-List EVERY laboratory parameter.
+List EVERY laboratory parameter from the report.
+
+Put abnormal parameters first.
 
 For EACH parameter use EXACTLY this format:
 
@@ -190,7 +288,7 @@ For EACH parameter use EXACTLY this format:
 
 - Current Value: actual value and unit
 - Normal / High / Low: Normal / High / Low
-- Why it matters: one short, simple sentence
+- Why it matters: one short patient-friendly sentence
 
 Example:
 
@@ -198,7 +296,7 @@ Example:
 
 - Current Value: 5.2 %
 - Normal / High / Low: Normal
-- Why it matters: Hemoglobin A1c is within the reported normal range.
+- Why it matters: The reported HbA1c is within the stated laboratory range.
 
 Example:
 
@@ -206,126 +304,124 @@ Example:
 
 - Current Value: 1.35 mg/dL
 - Normal / High / Low: High
-- Why it matters: The reported creatinine is above the stated reference range.
+- Why it matters: The reported creatinine is above the stated laboratory reference range.
 
 IMPORTANT:
 
 - Include EVERY parameter.
-- Use the exact parameter name from the report.
-- Use the exact value from the report.
-- Use the exact unit from the report.
-- Use the correct Normal / High / Low status.
+- Use the exact parameter name.
+- Use the exact value.
+- Use the exact unit.
+- Use the correct reported status.
 - Keep "Why it matters" to ONE short sentence.
-- Do not write long explanations.
+- Do not write long explanations here.
 - Do not add unrelated medical information.
 - Do not repeat the complete reference range for every normal result.
 - If a reference range is important for an abnormal result, mention it briefly.
-- Never use "..." as a replacement for missing information.
+- Never use "..." to replace missing information.
 
-==========================================
+==================================================
 
-### Possible Health Risks
+### Possible Health Considerations
 
-Mention ONLY possible concerns supported by abnormal laboratory
+Mention ONLY concerns supported by abnormal laboratory findings.
+
+If there are no abnormal findings, write:
+
+"No specific health concern is identified from the available laboratory values."
+
+If an abnormal result exists:
+
+- Identify the abnormal laboratory finding.
+- Explain its possible significance cautiously.
+- Do NOT call it a confirmed disease.
+- Do NOT invent additional risks.
+- Do NOT imply certainty.
+
+For example, if creatinine is elevated:
+
+"The reported creatinine is above the stated laboratory reference range.
+An elevated creatinine can have several possible causes and may warrant
+discussion with a qualified healthcare professional. This result alone
+does not establish a diagnosis of kidney disease."
+
+==================================================
+
+### Recommended Next Steps
+
+Recommendations must be directly related to the reported laboratory
 findings.
 
-If there are no abnormal findings, write EXACTLY:
+If abnormal laboratory findings are present:
 
-"No specific risk identified from the available laboratory values."
+- Recommend discussing the abnormal findings with a qualified healthcare
+  professional.
+- Mention relevant additional laboratory information ONLY when appropriate.
 
-If there is an abnormal value:
-
-- Explain that specific abnormal result.
-- Do not automatically call it a disease.
-- Do not diagnose the patient.
-- Do not invent additional risks.
-
-For example, if creatinine is high, say that the reported
-creatinine is elevated and that it may warrant discussion
-with a healthcare professional.
-
-Do NOT claim that the patient has kidney disease based only
-on an elevated creatinine value.
-
-==========================================
-
-### Recommendations
-
-Give recommendations ONLY when supported by the laboratory
-findings.
+For kidney-related findings, if appropriate, you may mention that a healthcare
+professional may consider other kidney-function information such as eGFR,
+BUN/urea or urine protein measurements.
 
 IMPORTANT:
 
-- Do NOT automatically give diet advice.
-- Do NOT automatically give hydration advice.
-- Do NOT automatically give exercise advice.
-- Do NOT give exact fluid intake amounts.
-- Do NOT prescribe medicines.
+- Do NOT diagnose.
+- Do NOT prescribe.
 - Do NOT recommend medication changes.
-- Do NOT recommend specific treatments.
-- Do NOT invent follow-up timeframes.
-- Do NOT recommend a specific medical specialist unless the
-  report itself explicitly recommends one.
+- Do NOT give exact fluid amounts.
+- Do NOT invent follow-up deadlines.
+- Do NOT recommend unnecessary tests.
+- Do NOT provide unsupported treatment advice.
 
-If all reported parameters are normal, write:
+If all reported laboratory parameters are normal, write:
 
 "No specific action is indicated from the available laboratory values."
 
-If abnormal parameters are present, recommend discussing the
-reported abnormal findings with a qualified healthcare
-professional.
+==================================================
 
-Keep recommendations short and directly related to the
-reported laboratory findings.
+### Important Note
 
-==========================================
-KIDNEY SAFETY RULES
-==========================================
+Use EXACTLY this text:
 
-1. Use only kidney-related values actually present in the report.
+"This AI-generated summary is for educational and informational purposes only.
+It does not diagnose a medical condition and should not replace evaluation by
+a qualified healthcare professional. Clinical interpretation should consider
+the complete laboratory report and the individual's clinical context."
 
-2. If creatinine is present, use its actual value and status.
+==================================================
+FINAL QUALITY CHECK
+==================================================
 
-3. If eGFR is present, use its actual value and status.
+Before returning the answer, verify internally:
 
-4. If BUN or urea is present, use its actual value and status.
+✓ Every laboratory parameter was included.
 
-5. If urine protein, microalbumin or ACR is present, use the
-   actual reported value and status.
+✓ No value was invented.
 
-6. High creatinine alone does NOT prove kidney disease.
+✓ No unit was invented.
 
-7. Do not diagnose kidney disease from a single abnormal value.
+✓ No reference range was invented.
 
-8. If eGFR is normal according to the report, state that the
-   reported eGFR is normal.
+✓ Abnormal findings appear before normal findings.
 
-9. If eGFR is low according to the report, describe it as a
-   reduced eGFR and recommend discussing the finding with a
-   qualified healthcare professional.
+✓ The exact reported values are preserved.
 
-10. If urine protein, microalbumin or ACR is elevated, describe
-    the reported abnormality without diagnosing kidney disease.
+✓ No disease was diagnosed.
 
-11. If BUN is normal, clearly state that the reported BUN is normal.
+✓ No medication was prescribed.
 
-12. Do not invent kidney abnormalities.
+✓ No unsupported risk was added.
 
-==========================================
-FINAL RULES
-==========================================
+✓ No unsupported lifestyle advice was added.
 
-- Complete EVERY laboratory parameter.
-- Never stop halfway through the parameter list.
-- Do not create additional sections.
-- Do not repeat the entire medical report.
-- Keep the response concise.
-- Make the output visually clean.
-- Follow the exact parameter format above.
+✓ Kidney findings follow the kidney safety rules.
 
-End EXACTLY with:
+✓ eGFR was NOT invented or calculated if absent.
 
-This AI report is for educational purposes only. Please consult a qualified doctor.
+✓ The output contains ONLY the requested sections.
+
+✓ The final Important Note is present.
+
+Return the final medical summary now.
 """
 
     # ==========================================
@@ -338,11 +434,19 @@ This AI report is for educational purposes only. Please consult a qualified doct
             model=MODEL,
             messages=[
                 {
+                    "role": "system",
+                    "content": (
+                        "You are MediMind AI, a cautious medical laboratory "
+                        "report explanation assistant. Never diagnose, "
+                        "prescribe medication or invent medical data."
+                    ),
+                },
+                {
                     "role": "user",
                     "content": prompt,
-                }
+                },
             ],
-            temperature=0.2,
+            temperature=0.15,
             max_tokens=MAX_SUMMARY_OUTPUT_TOKENS,
         )
 
@@ -357,10 +461,48 @@ This AI report is for educational purposes only. Please consult a qualified doct
         )
 
         if not result or not result.strip():
-
             raise RuntimeError(
                 "Hugging Face returned an empty response"
             )
+
+        result = result.strip()
+
+        # ==========================================
+        # Basic Output Safety Checks
+        # ==========================================
+
+        forbidden_patterns = [
+            "you definitely have",
+            "you have kidney disease",
+            "take this medicine",
+            "start taking",
+            "stop taking",
+            "change your medication",
+        ]
+
+        result_lower = result.lower()
+
+        for pattern in forbidden_patterns:
+            if pattern in result_lower:
+                logger.warning(
+                    "AI output contained potentially unsafe phrase: %s",
+                    pattern,
+                )
+
+        # ==========================================
+        # Ensure Disclaimer Exists
+        # ==========================================
+
+        if "This AI-generated summary is for educational" not in result:
+            result += """
+
+### Important Note
+
+This AI-generated summary is for educational and informational purposes only.
+It does not diagnose a medical condition and should not replace evaluation by
+a qualified healthcare professional. Clinical interpretation should consider
+the complete laboratory report and the individual's clinical context.
+"""
 
         return result.strip()
 
@@ -372,7 +514,7 @@ This AI report is for educational purposes only. Please consult a qualified doct
 
         logger.exception(
             "Hugging Face AI summary request failed: %s",
-            exc
+            exc,
         )
 
         return """
@@ -383,5 +525,9 @@ This AI report is for educational purposes only. Please consult a qualified doct
 The AI medical summary could not be generated right now.
 Please try again shortly.
 
-This AI report is for educational purposes only. Please consult a qualified doctor.
+### Important Note
+
+This AI-generated summary is for educational and informational purposes only.
+It does not diagnose a medical condition and should not replace evaluation by
+a qualified healthcare professional.
 """.strip()
